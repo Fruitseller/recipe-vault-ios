@@ -16,7 +16,7 @@ class RecipeListViewModel: ObservableObject {
             do {
                 recipes = try await api.fetchRecipes()
             } catch {
-                errorMessage = "Fehler beim Laden der Rezepte: \(error.localizedDescription)"
+                errorMessage = error.localizedDescription
             }
             isLoading = false
         }
