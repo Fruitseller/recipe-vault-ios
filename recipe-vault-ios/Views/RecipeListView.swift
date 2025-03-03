@@ -1,8 +1,8 @@
-import SwiftUICore
 import SwiftUI
 
 struct RecipeListView: View {
     @StateObject private var viewModel = RecipeListViewModel()
+    @State private var showingCreateSheet = false
     
     var body: some View {
         NavigationView {
@@ -10,14 +10,14 @@ struct RecipeListView: View {
                 if viewModel.isLoading {
                     ProgressView("Lade Rezepte...")
                 } else if let errorMessage = viewModel.errorMessage {
-                                    VStack {
-                                        Text(errorMessage)
-                                            .foregroundColor(.red)
-                                        Button("Erneut versuchen") {
-                                            viewModel.loadRecipes()
-                                        }
-                                    }
-                                } else {
+                    VStack {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                        Button("Erneut versuchen") {
+                            viewModel.loadRecipes()
+                        }
+                    }
+                } else {
                     List(viewModel.recipes) { recipe in
                         NavigationLink(destination: RecipeDetailView(recipe: recipe)) {
                             RecipeRowView(recipe: recipe)
@@ -29,11 +29,17 @@ struct RecipeListView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        // Hier später: Neues Rezept erstellen
+                        showingCreateSheet = true
                     }) {
                         Image(systemName: "plus")
                     }
                 }
+            }
+            .sheet(isPresented: $showingCreateSheet) {
+                // Wenn Sheet geschlossen wird, Rezepte neu laden
+                viewModel.loadRecipes()
+            } content: {
+                CreateRecipeView()
             }
         }
         .onAppear {

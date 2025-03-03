@@ -68,6 +68,64 @@ class RecipeAPI {
             throw APIError.decodingError(error)
         }
     }
+    
+
+    func createRecipe(recipe: CreateRecipeDTO) async throws -> Recipe {
+        guard let url = URL(string: "\(baseURL)/recipes") else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        
+        do {
+            request.httpBody = try encoder.encode(recipe)
+        } catch {
+            throw APIError.decodingError(error)
+        }
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+        
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            
+            let container = try decoder.singleValueContainer()
+            let dateString = try container.decode(String.self)
+            
+            if let date = formatter.date(from: dateString) {
+                return date
+            }
+            
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Datum konnte nicht im Format \(dateString) geparst werden"
+            )
+        }
+        
+        do {
+            let apiResponse = try decoder.decode(APIResponse<Recipe>.self, from: data)
+            return apiResponse.data
+        } catch {
+            print("Decodierung fehlgeschlagen mit Fehler:")
+            print(error)
+            throw APIError.decodingError(error)
+        }
+    }
+    
 }
 
 struct APIResponse<T: Codable>: Codable {
